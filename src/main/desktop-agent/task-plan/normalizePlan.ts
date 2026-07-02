@@ -1,11 +1,6 @@
 import { homedir } from 'node:os'
 import { isAbsolute, join, normalize } from 'node:path'
-import type {
-  DesktopAgentAction,
-  DesktopAgentTaskPlan,
-  TaskPlanStep,
-  TaskPlanVerification
-} from '../../../shared/desktopAgentTaskPlan'
+import type { DesktopAgentAction, DesktopAgentTaskPlan, TaskPlanStep, TaskPlanVerification } from '../../../shared/desktopAgent'
 import { DESKTOP_AGENT_TASK_ACTIONS } from '../../../shared/desktopAgentTaskPlan'
 
 const ALLOWED = new Set<DesktopAgentAction>(DESKTOP_AGENT_TASK_ACTIONS)

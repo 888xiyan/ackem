@@ -83,8 +83,8 @@ async function runSmokeVerify(
     return { ok: true, skipped: true, errors: [] }
   }
   const verify = await verifyDeployedExtension({ extensionId, session, coordinator })
-  if (!verify.ok && !verify.skipped) {
-    if (bundleKind === 'uskill') await loader.deactivateUskill(extensionId)
+   if (!verify.ok && !verify.skipped) {
+    if (bundleKind === 'uskill') await loader.deactivateUskil(extensionId)
     else await loader.deactivateUplugin(extensionId)
   }
   return {

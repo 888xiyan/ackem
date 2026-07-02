@@ -52,6 +52,7 @@ import {
   shouldOfferSkillToolsInDesktopAgentSession,
   shouldForceWebSearchInDesktopAgentSession
 } from './desktop-agent/modePolicy'
+import { INVESTIGATION_SYNTHESIZE_MIN_TOKENS } from '../shared/investigation'
 import { runAnthropicDesktopAgentLoop } from './desktop-agent/anthropicAgentLoop'
 import {
   isBackgroundAgentJobRunning,

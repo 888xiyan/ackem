@@ -1,4 +1,5 @@
 import { userRefersToAckemSelf } from './ackemProductIdentity'
+import type { AppSettings } from '../settings'
 import { createLlmJsonClient } from '../llmClient'
 import {
   defaultPaperCardTitle,

@@ -1,6 +1,7 @@
 import type { ReleaseChannelInfo, UpdateCheckResult } from '../../shared/updateTypes'
 import { compareSemver, isNewerVersion, parseSemver } from '../../shared/semverCompare'
 import { app } from 'electron'
+import { PLATFORM_ARCH } from '../../shared/platform'
 import {
   CHANNEL_ORDER_AUTO,
   GITEE,

@@ -6,9 +6,8 @@ import type {
   DispatchCatalogEntry,
   EngineSnapshot,
   ExtensionEvent,
-  SkillInvocation,
-  SkillResult
 } from './protocols'
+import type { SkillInvocation, SkillResult } from './skills/types'
 import type { RuntimeContext } from '../context/types'
 import type { KnowledgeContextResolveInput } from './plugins/builtin/knowledge-presentation/plugin'
 import { PluginRegistry } from './plugins/registry'

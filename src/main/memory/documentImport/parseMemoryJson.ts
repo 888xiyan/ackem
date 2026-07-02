@@ -10,9 +10,9 @@ import type {
   MemoryJsonAnchorInput,
   MemoryJsonBundle,
   MemoryJsonEpisodeInput,
-  MemoryJsonFactInput,
-  MemoryJsonFactsFile,
-  MemoryJsonParseResult,
+ MemoryJsonFactInput,
+ MemoryJsonFactsFile,
+  MemoryJsonParseStats,
 } from '../../../shared/memoryJsonImport'
 import { MEMORY_JSON_BUNDLE_SCHEMA } from '../../../shared/memoryJsonImport'
 import { newDraftId } from './parseImportChunk'

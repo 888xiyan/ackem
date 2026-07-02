@@ -14,6 +14,7 @@ import { setLastConsolidationTurn } from '../engine/state-persistence'
 import { appendMirrorFindings, readMirrorFindings, runMirrorCheck } from '../memory/mirrorCheckRunner'
 import { exportMemoryArchive } from '../memory/archiveExporter'
 import { buildMemoryAuditReport } from '../memory/memoryAudit/buildMemoryAuditReport'
+import { MemoryConsolidator } from '../memory/consolidator'
 import {
   formatMemoryAuditMarkdown,
   toMemoryAuditCardPayload,

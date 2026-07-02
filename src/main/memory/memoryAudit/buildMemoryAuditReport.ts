@@ -4,7 +4,8 @@ import type { EpisodicStore } from '../episodicStore'
 import { getDatabase } from '../../db/database'
 import { DOMAINS } from '../taxonomy'
 import { IMPORT_SESSION_ID } from '../../../shared/documentImport'
-import type { MemoryAuditMode, MemoryAuditReport } from '../../../shared/memoryAudit'
+import type { MemoryAuditReport } from '../../../shared/memoryAudit'
+import type { MemoryAuditMode } from './memoryAuditIntent'
 import {
   CURATED_AUDIT_MAX_EPISODES,
   CURATED_AUDIT_MAX_FACTS,

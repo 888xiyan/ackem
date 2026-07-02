@@ -708,9 +708,9 @@ export async function runPreLlmTurn(args: {
     ? (Date.now() - new Date(firstMetStr).getTime()) / 86400000
     : 0
 
-  const emergencePersist = prev.emergencePersistence ?? { active: null, history: [] }
+ const emergencePersist = prev.emergencePersistence ?? { active: null, history: [] }
 
-  let desireResult: { stack: import('./desire').DesireStack; hints: string[] }
+  let desireResult: { stack: import('./types').DesireStack; hints: string[] }
   let activeEmergence: EmergenceState | null
 
   if (ultralite) {

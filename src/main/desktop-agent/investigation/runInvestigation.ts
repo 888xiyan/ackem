@@ -1,6 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
+import { PLATFORM } from '../../../shared/platform'
 import type { WebContents } from 'electron'
 import type {
   DocumentsFindingsReport,
@@ -38,6 +39,14 @@ const GAME_DIR_HEURISTIC =
 
 function programFilesRoots(): { pf: string; pfx86: string; localPrograms: string; desktop: string } {
   const home = homedir()
+  if (PLATFORM === 'linux') {
+    return {
+      pf: '/usr/share',
+      pfx86: '/usr/local/share',
+      localPrograms: '/opt',
+      desktop: join(home, 'Desktop')
+    }
+  }
   return {
     pf: process.env.ProgramFiles ?? join('C:', 'Program Files'),
     pfx86: process.env['ProgramFiles(x86)'] ?? join('C:', 'Program Files (x86)'),

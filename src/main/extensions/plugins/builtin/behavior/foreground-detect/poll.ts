@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process'
+import { execFile, execSync } from 'node:child_process'
 import { promisify } from 'node:util'
 import { updateForegroundTitle } from '../../../../../context/foregroundState'
 
@@ -17,9 +17,25 @@ const PS_SCRIPT = [
 
 let timer: ReturnType<typeof setInterval> | null = null
 
+/** Linux：通过 xdotool 获取当前活跃窗口标题 */
+function getLinuxActiveWindowTitle(): string {
+  try {
+    const stdout = execSync('xdotool getactivewindow getwindowname 2>/dev/null', {
+      encoding: 'utf8',
+      timeout: 3000
+    }).trim()
+    return stdout
+  } catch {
+    return ''
+  }
+}
+
 export async function readForegroundWindowTitle(): Promise<string> {
   if (process.env.ACKEM_FOREGROUND_TITLE) {
     return process.env.ACKEM_FOREGROUND_TITLE
+  }
+  if (process.platform === 'linux') {
+    return getLinuxActiveWindowTitle()
   }
   if (process.platform !== 'win32') {
     return ''

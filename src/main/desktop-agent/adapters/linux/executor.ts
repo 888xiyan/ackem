@@ -1,21 +1,27 @@
 /**
- * Windows 桌面代理执行器
+ * Linux 桌面代理执行器
  *
- * Windows 平台特有的进程执行逻辑（runPowerShell / closeAppTarget / openAppTarget），
- * 其他文件操作由 adapters/common.ts 提供跨平台复用。
+ * 实现 Linux 平台特有的进程执行逻辑（closeAppTarget / openAppTarget），
+ * 其他文件操作（listFolder / readTextFile / searchFiles / grepText / downloadHttps）
+ * 由 adapters/common.ts 提供跨平台复用。
  */
 import { spawn } from 'node:child_process'
+import {
+  basename,
+  dirname,
+  join
+} from 'node:path'
+import { isBlockedCloseTarget } from '../../policy'
+import type { DesktopAgentAction, UseComputerArgs } from '../../../../shared/desktopAgent'
 import {
   copyFileSync,
   existsSync,
   mkdirSync,
   renameSync,
+  statSync,
   writeFileSync
 } from 'node:fs'
-import { basename, dirname, extname, join } from 'node:path'
 import { shell } from 'electron'
-import type { DesktopAgentAction, UseComputerArgs } from '../../../../shared/desktopAgent'
-import { isBlockedCloseTarget } from '../../policy'
 import {
   defaultDownloadDir,
   downloadHttps,
@@ -28,13 +34,10 @@ import {
   statLine
 } from '../common'
 
-function runPowerShell(script: string): Promise<{ ok: boolean; output: string }> {
+/** 运行 bash 脚本，返回执行结果 */
+function runBash(script: string): Promise<{ ok: boolean; output: string }> {
   return new Promise((resolve) => {
-    const child = spawn(
-      'powershell.exe',
-      ['-NoProfile', '-NonInteractive', '-Command', script],
-      { windowsHide: true }
-    )
+    const child = spawn('bash', ['-c', script])
     let out = ''
     child.stdout.on('data', (d) => { out += String(d) })
     child.stderr.on('data', (d) => { out += String(d) })
@@ -47,25 +50,22 @@ async function closeAppTarget(target: string): Promise<ExecuteResult> {
   if (isBlockedCloseTarget(target)) {
     return { ok: false, content: '系统关键进程不可关闭', summary: '关闭被拒绝' }
   }
-  const name = target.replace(/\.exe$/i, '')
-  const ps = `$p = Get-Process -Name '${name.replace(/'/g, "''")}' -ErrorAction SilentlyContinue; if (-not $p) { exit 2 }; $p | ForEach-Object { $_.CloseMainWindow() | Out-Null }; exit 0`
-  const r = await runPowerShell(ps)
-  if (!r.ok) {
-    return {
-      ok: false,
-      content: r.output || '未找到可关闭的窗口',
-      summary: `未能关闭 ${target}`
-    }
+  const escaped = target.replace(/'/g, "'\\''")
+  const result = await runBash(`pkill -f '${escaped}' 2>/dev/null; echo $?`)
+  const ok = result.output?.trim() === '0'
+  return {
+    ok,
+    content: ok ? `已终止 ${target}` : (result.output || '未找到进程'),
+    summary: ok ? `已关闭 ${target}` : `未能关闭 ${target}`
   }
-  return { ok: true, content: `已请求关闭 ${target}`, summary: `已关闭 ${target}` }
 }
 
 async function openAppTarget(target: string): Promise<ExecuteResult> {
-  const ps = `Start-Process '${target.replace(/'/g, "''")}'`
-  const r = await runPowerShell(ps)
-  if (!r.ok) {
-    return { ok: false, content: r.output || '启动失败', summary: `未能打开 ${target}` }
-  }
+  // 先尝试直接执行（如果目标有执行权限），否则用 xdg-open
+  const escaped = target.replace(/'/g, "'\\''")
+  const result = await runBash(
+    `if [ -x '${escaped}' ]; then '${escaped}' & disown; echo OK; else xdg-open '${escaped}' 2>/dev/null & disown; echo OK; fi`
+  )
   return { ok: true, content: `已启动 ${target}`, summary: `已打开 ${target}` }
 }
 
@@ -91,7 +91,7 @@ export async function executeDesktopAgentAction(
     case 'read_text':
       return readTextFile(path)
     case 'read_document': {
-      const ext = extname(path).toLowerCase()
+      const ext = basename(path).includes('.') ? `.${basename(path).split('.').pop()}`.toLowerCase() : ''
       if (['.txt', '.md', '.csv', '.json', '.log'].includes(ext)) {
         return readTextFile(path)
       }
@@ -153,7 +153,7 @@ export async function executeDesktopAgentAction(
     case 'download_and_install': {
       const dir = defaultDownloadDir(ctx.downloadDir)
       mkdirSync(dir, { recursive: true })
-      const fileName = basename(new URL(url).pathname) || 'installer.exe'
+      const fileName = basename(new URL(url).pathname) || 'installer.bin'
       const dest = join(dir, fileName)
       const dl = await downloadHttps(url, dest)
       if (!dl.ok) return dl

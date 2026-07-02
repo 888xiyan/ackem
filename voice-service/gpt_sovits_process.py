@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import socket
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -34,7 +35,12 @@ def resolve_gpt_sovits_home(config_paths: list[Path]) -> Path | None:
 
 
 def _is_gpt_sovits_home(path: Path) -> bool:
-    return (path / "api_v2.py").is_file() and (path / "runtime" / "python.exe").is_file()
+    if not (path / "api_v2.py").is_file():
+        return False
+    if sys.platform == "win32":
+        return (path / "runtime" / "python.exe").is_file()
+    else:
+        return (path / "runtime" / "bin" / "python3").is_file()
 
 
 def is_port_open(host: str, port: int) -> bool:
@@ -67,7 +73,10 @@ class GptSovitsApiProcess:
             logger.info("GPT-SoVITS API already listening on %s", self.base_url)
             return
 
-        python_exe = self.home / "runtime" / "python.exe"
+        if sys.platform == "win32":
+            python_exe = self.home / "runtime" / "python.exe"
+        else:
+            python_exe = self.home / "runtime" / "bin" / "python3"
         api_script = self.home / "api_v2.py"
         if not python_exe.is_file():
             raise RuntimeError(f"GPT-SoVITS python not found: {python_exe}")
@@ -84,13 +93,16 @@ class GptSovitsApiProcess:
             str(self.port),
         ]
         logger.info("Starting GPT-SoVITS API: %s", " ".join(cmd))
-        self._proc = subprocess.Popen(
-            cmd,
+        popen_kwargs = dict(
             cwd=str(self.home),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
+        if sys.platform == "win32":
+            popen_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+        else:
+            popen_kwargs["start_new_session"] = True
+        self._proc = subprocess.Popen(cmd, **popen_kwargs)
 
         deadline = time.time() + timeout_sec
         while time.time() < deadline:

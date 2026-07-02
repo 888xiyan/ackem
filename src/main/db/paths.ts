@@ -1,6 +1,6 @@
 import { join, resolve } from 'node:path'
 
-/** 与 settings 解析的 dataRoot 一致：便携模式为 `{cwd|exe}/data`，或 %LOCALAPPDATA%/Ackem */
+/** 与 settings 解析的 dataRoot 一致：便携模式为 `{cwd|exe}/data`，或平台数据目录/Ackem */
 export const ACKEM_DB_FILENAME = 'ackem.db'
 
 export function databasePath(dataRoot: string): string {

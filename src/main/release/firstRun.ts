@@ -32,8 +32,11 @@ function markFirstRunComplete(dataRoot: string): void {
   )
 }
 
-/** 首次启动在桌面创建 Ackem.lnk（Windows） */
+/** 首次启动在桌面创建快捷方式（Windows .lnk / Linux .desktop） */
 export function createDesktopShortcutIfNeeded(): boolean {
+  if (process.platform === 'linux') {
+    return createLinuxDesktopShortcut()
+  }
   if (process.platform !== 'win32') return false
   const desktop = app.getPath('desktop')
   const shortcutPath = join(desktop, 'Ackem.lnk')
@@ -55,6 +58,36 @@ export function createDesktopShortcutIfNeeded(): boolean {
     return ok
   } catch (e) {
     log.warn('desktop shortcut failed', { error: String(e) })
+    return false
+  }
+}
+
+function createLinuxDesktopShortcut(): boolean {
+  const desktop = app.getPath('desktop')
+  const shortcutPath = join(desktop, 'ackem.desktop')
+  if (existsSync(shortcutPath)) return false
+
+  const launchTarget = resolveUserLaunchPath()
+  const iconPath = resolveShortcutIconPath()
+  const entry = `[Desktop Entry]
+Type=Application
+Name=Ackem
+Exec=${launchTarget}
+Icon=${iconPath ?? 'ackem'}
+Comment=Ackem — 本地 AI 伴侣
+Categories=Utility;
+Terminal=false
+StartupNotify=true
+`
+  try {
+    writeFileSync(shortcutPath, entry, 'utf-8')
+    // 使 .desktop 文件可执行
+    const { execSync } = require('node:child_process')
+    execSync(`chmod +x '${shortcutPath}'`, { timeout: 3000 })
+    log.info('linux desktop shortcut created', { shortcutPath })
+    return true
+  } catch (e) {
+    log.warn('linux desktop shortcut failed', { error: String(e) })
     return false
   }
 }

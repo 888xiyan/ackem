@@ -1,7 +1,9 @@
 import { existsSync, readdirSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import { homedir } from 'node:os'
-import { parseSteamLibraries } from '../parsers/win/steamLibraries'
+import { PLATFORM } from '../../../shared/platform'
+import { parseSteamLibraries as parseWinSteamLibraries } from '../parsers/win/steamLibraries'
+import { parseSteamLibraries as parseLinuxSteamLibraries } from '../parsers/linux/steamLibraries'
 import { parseEpicManifests } from '../parsers/win/epicManifests'
 import { scanShortcutsInDir, scanStartMenuShortcuts } from '../parsers/win/shortcuts'
 import { searchFilesByExtensions, parseExtensionsFromQuery } from '../investigation/documentSearch'
@@ -19,6 +21,16 @@ const GAME_DIR_HEURISTIC =
 
 function programRoots() {
   const home = homedir()
+  if (PLATFORM === 'linux') {
+    return {
+      pf: '/usr/share',
+      pfx86: '/usr/local/share',
+      localPrograms: '/opt',
+      desktop: join(home, 'Desktop'),
+      documents: join(home, 'Documents'),
+      downloads: join(home, 'Downloads')
+    }
+  }
   return {
     pf: process.env.ProgramFiles ?? join('C:', 'Program Files'),
     pfx86: process.env['ProgramFiles(x86)'] ?? join('C:', 'Program Files (x86)'),
@@ -78,7 +90,13 @@ export function buildMachineMapSteps(scanRunId: string): CollectorStep[] {
       id: 'steam_libraries',
       label: 'Steam 游戏库',
       run: async () => {
-        const steam = parseSteamLibraries()
+        if (PLATFORM === 'linux') {
+          const games = parseLinuxSteamLibraries()
+          return games
+            .map((g) => toGameEntry(g.name, g.installDir, 'steam_common', scanRunId))
+            .filter((x): x is UpsertEntryInput => x != null)
+        }
+        const steam = parseWinSteamLibraries()
         return steam.games
           .map((g) => toGameEntry(g.displayName, g.path, 'steam_common', scanRunId))
           .filter((x): x is UpsertEntryInput => x != null)

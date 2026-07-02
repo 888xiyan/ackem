@@ -1,4 +1,5 @@
 # 💫 Ackem -Linux
+Construction drawing adaptation for Linux：[linux-adapt-blueprint](./linux-adapt-blueprint.md)
 
 ![Version](https://img.shields.io/badge/Version-1.0.0-orange?style=for-the-badge)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)

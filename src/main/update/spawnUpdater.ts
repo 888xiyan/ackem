@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { app } from 'electron'
 import type { UpdateJob, UpdateStartRequest } from '../../shared/updateTypes'
 import { greenFolderName } from './config'
+import { APP_BINARY_NAME, PLATFORM_ARCH } from '../../shared/platform'
 import { spawnLauncherProcess } from './preflight'
 
 export function buildUpdateJob(
@@ -13,7 +14,7 @@ export function buildUpdateJob(
 ): UpdateJob {
   const base = join(tmpdir(), 'ackem-update')
   mkdirSync(base, { recursive: true })
-  const zipPath = join(base, `Ackem-${req.targetVersion}-win-x64.zip`)
+  const zipPath = join(base, `Ackem-${req.targetVersion}-${PLATFORM_ARCH}.zip`)
   const extractDir = join(base, 'extract')
   const stagingDir = join(extractDir, greenFolderName(req.targetVersion))
   return {
@@ -27,7 +28,7 @@ export function buildUpdateJob(
     zipPath,
     stagingDir,
     extractDir,
-    ackemExe: join(installDir, 'Ackem.exe')
+    ackemExe: join(installDir, APP_BINARY_NAME)
   }
 }
 

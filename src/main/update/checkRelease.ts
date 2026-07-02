@@ -51,7 +51,7 @@ async function fetchJson<T>(url: string): Promise<T> {
 function pickAsset(release: GitHubRelease | GiteeRelease, version: string) {
   const name = zipAssetName(version)
   const assets = release.assets ?? []
-  return assets.find((a) => a.name === name) ?? assets.find((a) => a.name?.includes('win-x64') && a.name.endsWith('.zip'))
+  return assets.find((a) => a.name === name) ?? assets.find((a) => a.name?.includes(PLATFORM_ARCH) && a.name.endsWith('.zip'))
 }
 
 async function fetchGithubRelease(): Promise<ReleaseChannelInfo> {

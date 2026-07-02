@@ -1,5 +1,5 @@
-/** W7 SMTC：读取 Windows System Media Transport Controls 状态 */
-import { execFile } from 'node:child_process'
+/** W7 SMTC：读取 Windows System Media Transport Controls 状态 / Linux MPRIS */
+import { execFile, execSync } from 'node:child_process'
 import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
@@ -36,7 +36,29 @@ try {
 }
 `.trim()
 
+/** Linux MPRIS：通过 playerctl 查询当前播放 */
+function readMprisSession(): MediaSessionInfo {
+  try {
+    const stdout = execSync(
+      "playerctl -f '{{player}}|{{title}}|{{artist}}|{{album}}|{{status}}' metadata 2>/dev/null",
+      { encoding: 'utf8', timeout: 5000 }
+    ).trim()
+    if (!stdout) return EMPTY
+    const parts = stdout.split('|')
+    if (parts.length < 5) return EMPTY
+    return {
+      title: parts[1] ?? '',
+      artist: parts[2] ?? '',
+      album: parts[3] ?? '',
+      isPlaying: parts[4] === 'Playing'
+    }
+  } catch {
+    return EMPTY
+  }
+}
+
 export async function readMediaSession(): Promise<MediaSessionInfo> {
+  if (process.platform === 'linux') return readMprisSession()
   if (process.platform !== 'win32') return EMPTY
   if (process.env.ACKEM_MEDIA_TITLE) {
     return {

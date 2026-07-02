@@ -1,6 +1,7 @@
 import { homedir } from 'node:os'
 import { env } from 'node:process'
 import { isAbsolute, normalize, resolve } from 'node:path'
+import { PLATFORM } from '../../shared/platform'
 import type { DesktopAgentAction } from '../../shared/desktopAgent'
 import {
   APP_ACTIONS,
@@ -10,7 +11,7 @@ import {
 } from './actions'
 import type { AppSettings } from '../settings'
 
-const BLOCKED_PROCESS_NAMES = new Set([
+const BLOCKED_PROCESS_NAMES_WIN = new Set([
   'csrss.exe',
   'winlogon.exe',
   'lsass.exe',
@@ -21,10 +22,36 @@ const BLOCKED_PROCESS_NAMES = new Set([
   'explorer.exe'
 ])
 
-const SYSTEM_WRITE_PREFIXES = [
+const BLOCKED_PROCESS_NAMES_LINUX = new Set([
+  'systemd',
+  'init',
+  'gnome-shell',
+  'plasmashell',
+  'kwin_x11',
+  'Xorg',
+  'Xwayland',
+  'dbus-daemon',
+  'pulseaudio',
+  'pipewire',
+  'pipewire-pulse',
+])
+
+const SYSTEM_WRITE_PREFIXES_WIN = [
   'c:\\windows\\system32',
   'c:\\windows\\syswow64'
 ]
+
+const SYSTEM_WRITE_PREFIXES_LINUX = [
+  '/boot',
+  '/etc',
+  '/sys',
+  '/proc',
+  '/usr/lib/systemd',
+  '/usr/lib/modules',
+]
+
+const BLOCKED_PROCESS_NAMES = PLATFORM === 'linux' ? BLOCKED_PROCESS_NAMES_LINUX : BLOCKED_PROCESS_NAMES_WIN
+const SYSTEM_WRITE_PREFIXES = PLATFORM === 'linux' ? SYSTEM_WRITE_PREFIXES_LINUX : SYSTEM_WRITE_PREFIXES_WIN
 
 export type PolicyCheck = {
   ok: boolean
@@ -39,6 +66,11 @@ export type PolicyCheck = {
 function expandPathTokens(raw: string): string {
   let s = raw.trim()
   s = s.replace(/^~(?=$|[\\/])/g, homedir())
+  if (PLATFORM === 'linux') {
+    // 支持 $VAR 和 ${VAR} 环境变量展开
+    s = s.replace(/\$\{([^}]+)\}/g, (_, name: string) => env[name] ?? `\${${name}}`)
+    s = s.replace(/\$([a-zA-Z_][a-zA-Z0-9_]*)/g, (_, name: string) => env[name] ?? `$${name}`)
+  }
   s = s.replace(/%([^%]+)%/g, (_, name: string) => {
     const key = name in env ? name : name.toUpperCase()
     return env[key] ?? `%${name}%`
@@ -58,6 +90,15 @@ function normalizeUserPath(raw: string, cwd: string): string {
 }
 
 function isSensitivePath(path: string): boolean {
+  if (PLATFORM === 'linux') {
+    if (path.startsWith('/etc')) return true
+    if (path.startsWith('/boot')) return true
+    if (path.startsWith('/sys')) return true
+    if (path.startsWith('/proc')) return true
+    if (path.startsWith('/root')) return true
+    if (path.startsWith('/var/lib')) return true
+    return false
+  }
   const lower = path.toLowerCase()
   if (lower.startsWith('c:\\windows')) return true
   if (lower.startsWith('c:\\program files')) return true
@@ -73,6 +114,13 @@ function isHardBlockedWritePath(path: string): boolean {
 export function isBlockedCloseTarget(target: string): boolean {
   const name = target.trim().toLowerCase()
   if (!name) return false
+  if (PLATFORM === 'linux') {
+    // Linux 进程名不含 .exe，直接匹配
+    if (BLOCKED_PROCESS_NAMES.has(name)) return true
+    // 也检查去掉路径前缀的基本名称
+    const base = name.includes('/') ? name.split('/').pop() ?? name : name
+    return BLOCKED_PROCESS_NAMES.has(base)
+  }
   const base = name.endsWith('.exe') ? name : `${name}.exe`
   return BLOCKED_PROCESS_NAMES.has(base) || BLOCKED_PROCESS_NAMES.has(name)
 }

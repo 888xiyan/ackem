@@ -14,7 +14,7 @@ import {
 } from './policy'
 import { requestDesktopAgentConfirm } from './confirm/confirmService'
 import { shouldSkipDesktopAgentConfirm } from './confirmBypass'
-import { executeDesktopAgentAction } from './adapters/win/executor'
+import { executeDesktopAgentAction } from './adapters/index'
 import { homedir } from 'node:os'
 
 function decisionMessage(decision: string): string {

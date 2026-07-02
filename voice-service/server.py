@@ -43,18 +43,26 @@ gpt_sovits_config_paths: list[str] = []
 
 def _default_gpt_sovits_config_paths() -> list[str]:
     paths: list[str] = []
-    appdata = Path(os.environ.get("APPDATA", ""))
-    if appdata:
-        paths.append(str(appdata / "Ackem" / "voice-models" / "gpt-sovits-home.txt"))
+    if sys.platform == "linux":
+        xdg = os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local" / "share"))
+        paths.append(str(Path(xdg) / "Ackem" / "voice-models" / "gpt-sovits-home.txt"))
+    else:
+        appdata = Path(os.environ.get("APPDATA", ""))
+        if appdata:
+            paths.append(str(appdata / "Ackem" / "voice-models" / "gpt-sovits-home.txt"))
     paths.append(str(Path(__file__).parent / "models" / "gpt-sovits-home.txt"))
     return paths
 
 
 def _default_gpt_sovits_pack_dirs(extra: list[str]) -> list[str]:
     dirs: list[str] = [str(Path(__file__).parent / "models" / "gpt-sovits")]
-    appdata = Path(os.environ.get("APPDATA", ""))
-    if appdata:
-        dirs.append(str(appdata / "Ackem" / "voice-models" / "gpt-sovits"))
+    if sys.platform == "linux":
+        xdg = os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local" / "share"))
+        dirs.append(str(Path(xdg) / "Ackem" / "voice-models" / "gpt-sovits"))
+    else:
+        appdata = Path(os.environ.get("APPDATA", ""))
+        if appdata:
+            dirs.append(str(appdata / "Ackem" / "voice-models" / "gpt-sovits"))
     dirs.extend(extra)
     return dirs
 

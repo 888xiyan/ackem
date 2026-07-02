@@ -3,20 +3,21 @@ import { spawn } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import type { UpdateJob, UpdateProgressEvent } from '../../shared/updateTypes'
 import { greenFolderName } from './config'
+import { APP_BINARY_NAME } from '../../shared/platform'
 import { downloadReleaseZip } from './download'
 import { syncReleaseFromStaging } from './installSync'
 import { extractZip, testZipIntegrity } from './zipVerify'
 
 function resolveStagingDir(extractDir: string, version: string): string {
   const named = join(extractDir, greenFolderName(version))
-  if (existsSync(join(named, 'Ackem.exe'))) return named
-  if (existsSync(join(extractDir, 'Ackem.exe'))) return extractDir
+  if (existsSync(join(named, APP_BINARY_NAME))) return named
+  if (existsSync(join(extractDir, APP_BINARY_NAME))) return extractDir
   for (const entry of readdirSync(extractDir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue
     const candidate = join(extractDir, entry.name)
-    if (existsSync(join(candidate, 'Ackem.exe'))) return candidate
+    if (existsSync(join(candidate, APP_BINARY_NAME))) return candidate
   }
-  throw new Error(`Missing Ackem.exe in extracted package under ${extractDir}`)
+  throw new Error(`Missing ${APP_BINARY_NAME} in extracted package under ${extractDir}`)
 }
 
 function emit(win: Electron.BrowserWindow | null, ev: UpdateProgressEvent): void {
@@ -66,8 +67,8 @@ export async function runUpdatePipeline(job: UpdateJob, win: Electron.BrowserWin
     extractZip(job.zipPath, job.extractDir)
 
     const stagingDir = resolveStagingDir(job.extractDir, job.targetVersion)
-    if (!existsSync(join(stagingDir, 'Ackem.exe'))) {
-      throw new Error(`Extracted package missing Ackem.exe in ${stagingDir}`)
+    if (!existsSync(join(stagingDir, APP_BINARY_NAME))) {
+      throw new Error(`Extracted package missing ${APP_BINARY_NAME} in ${stagingDir}`)
     }
 
     send({ phase: 'extract', message: 'Extract complete', percent: 100 })

@@ -1,10 +1,11 @@
 /**
- * Ackem 卸载：桌面快捷方式、可选删除数据/程序；支持设置内触发或运行 Uninstall Ackem.bat
+ * Ackem 卸载：桌面快捷方式、可选删除数据/程序；支持设置内触发或运行 uninstall 脚本
  */
 import { app, shell } from 'electron'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { spawn } from 'node:child_process'
+import { PLATFORM } from '../../shared/platform'
 import { loadSettings } from '../settings'
 import { resolveDataRoot } from '../paths'
 import { createLogger } from '../logger'
@@ -19,7 +20,7 @@ export type UninstallInfo = {
   mode: UninstallMode
   installDir: string
   dataRoot: string
-  batPath: string | null
+  scriptPath: string | null
   nsisUninstaller: string | null
 }
 
@@ -33,6 +34,7 @@ function exeDir(): string {
 }
 
 function resolveNsisUninstaller(installDir: string): string | null {
+  if (PLATFORM !== 'win32') return null
   const candidates = [
     join(installDir, 'Uninstall Ackem.exe'),
     join(installDir, 'Uninstall.exe')
@@ -43,17 +45,25 @@ function resolveNsisUninstaller(installDir: string): string | null {
   return null
 }
 
-function resolveUninstallBatPath(): string | null {
-  const candidates = [
-    join(exeDir(), 'Uninstall Ackem.bat'),
-    join(process.resourcesPath, 'uninstall.bat'),
-    join(exeDir(), 'resources', 'uninstall.bat')
-  ]
+function resolveUninstallScriptPath(): string | null {
+  const scriptName = PLATFORM === 'linux' ? 'uninstall.sh' : 'Uninstall Ackem.bat'
+  const candidates = PLATFORM === 'linux'
+    ? [
+        join(exeDir(), 'uninstall.sh'),
+        join(process.resourcesPath, 'uninstall.sh'),
+        join(exeDir(), 'resources', 'uninstall.sh'),
+      ]
+    : [
+        join(exeDir(), 'Uninstall Ackem.bat'),
+        join(process.resourcesPath, 'uninstall.bat'),
+        join(exeDir(), 'resources', 'uninstall.bat'),
+      ]
   for (const p of candidates) {
     if (existsSync(p)) return p
   }
   if (!app.isPackaged) {
-    const dev = join(process.cwd(), 'scripts', 'uninstall.bat')
+    const devScript = PLATFORM === 'linux' ? 'uninstall.sh' : 'uninstall.bat'
+    const dev = join(process.cwd(), 'scripts', devScript)
     if (existsSync(dev)) return dev
   }
   return null
@@ -71,19 +81,28 @@ export function getUninstallInfo(): UninstallInfo {
     mode,
     installDir,
     dataRoot,
-    batPath: resolveUninstallBatPath(),
+    scriptPath: resolveUninstallScriptPath(),
     nsisUninstaller
   }
 }
 
-function spawnDetachedUninstall(batPath: string, args: string[]): void {
-  const child = spawn('cmd.exe', ['/c', batPath, ...args], {
-    detached: true,
-    stdio: 'ignore',
-    windowsHide: true,
-    cwd: dirname(batPath)
-  })
-  child.unref()
+function spawnDetachedUninstall(scriptPath: string, args: string[]): void {
+  if (PLATFORM === 'linux') {
+    const child = spawn('bash', [scriptPath, ...args], {
+      detached: true,
+      stdio: 'ignore',
+      cwd: dirname(scriptPath)
+    })
+    child.unref()
+  } else {
+    const child = spawn('cmd.exe', ['/c', scriptPath, ...args], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+      cwd: dirname(scriptPath)
+    })
+    child.unref()
+  }
 }
 
 export async function launchUninstallAndQuit(opts: UninstallLaunchOptions): Promise<void> {
@@ -100,9 +119,9 @@ export async function launchUninstallAndQuit(opts: UninstallLaunchOptions): Prom
     return
   }
 
-  const bat = info.batPath
-  if (!bat) {
-    log.warn('uninstall.bat not found', info)
+  const script = info.scriptPath
+  if (!script) {
+    log.warn('uninstall script not found', info)
     if (deleteData && existsSync(info.dataRoot)) {
       shell.trashItem(info.dataRoot).catch(() => {})
     }
@@ -111,10 +130,10 @@ export async function launchUninstallAndQuit(opts: UninstallLaunchOptions): Prom
   }
 
   const args: string[] = []
-  if (deleteData) args.push('/DATA')
-  if (removeApp || info.mode === 'portable') args.push('/REMOVE_APP')
+  if (deleteData) args.push('--delete-data')
+  if (removeApp || info.mode === 'portable') args.push('--remove-app')
 
-  log.info('launching uninstall helper', { bat, args })
-  spawnDetachedUninstall(bat, args)
+  log.info('launching uninstall helper', { script, args })
+  spawnDetachedUninstall(script, args)
   app.quit()
 }

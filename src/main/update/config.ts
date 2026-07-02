@@ -1,4 +1,5 @@
 import type { UpdateChannel } from '../../shared/updateTypes'
+import { PLATFORM_ARCH, platformZipAssetName, platformFolderName } from '../../shared/platform'
 
 export const UPDATE_USER_AGENT = 'Ackem-Desktop-Updater/1.0'
 
@@ -17,13 +18,11 @@ export const GITEE = {
 } as const
 
 export function zipAssetName(version: string): string {
-  const v = version.replace(/^v/i, '')
-  return `Ackem-${v}-win-x64.zip`
+  return platformZipAssetName(version)
 }
 
 export function greenFolderName(version: string): string {
-  const v = version.replace(/^v/i, '')
-  return `Ackem-${v}-win-x64`
+  return platformFolderName(version)
 }
 
 export function normalizeTag(tag: string): string {

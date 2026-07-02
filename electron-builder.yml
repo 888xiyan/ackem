@@ -32,10 +32,16 @@ files:
 extraFiles:
   - from: scripts/uninstall.bat
     to: Uninstall Ackem.bat
+  - from: scripts/uninstall.sh
+    to: uninstall.sh
+  - from: scripts/launch-ackem.sh
+    to: launch-ackem.sh
 
 extraResources:
   - from: scripts/uninstall.bat
     to: uninstall.bat
+  - from: scripts/uninstall.sh
+    to: uninstall.sh
   # 语音服务（含内置 gpt-sovits-runtime/、models/gpt-sovits/ 角色语音包；见 voice-service/models/gpt-sovits/BUNDLED.md）
   - from: voice-service
     to: voice-service
@@ -83,3 +89,16 @@ nsis:
   shortcutName: Ackem
   artifactName: ${productName}-${version}-Setup-${arch}.exe
   deleteAppDataOnUninstall: false
+
+linux:
+  icon: build/icon.png
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: dir
+      arch:
+        - x64
+  category: Utility
+  artifactName: ${productName}-${version}-linux-${arch}.${ext}
+  executableName: ackem

@@ -8,13 +8,43 @@ on:
 
 jobs:
   test:
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+      - name: Install Linux system deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full xdotool playerctl
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+
+  build-linux:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install Linux build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full build-essential python3
+      - run: npm ci
+      - run: npm run build
+      - name: Build AppImage
+        run: npx electron-builder --config electron-builder.yml --linux AppImage --x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ackem-linux-x64
+          path: dist/*.AppImage

@@ -1,6 +1,7 @@
 import { homedir } from 'node:os'
 import { join, relative } from 'node:path'
 import { app } from 'electron'
+import { PLATFORM } from '../shared/platform'
 import type { AppSettings } from './settings'
 import { resolvePackagedAppDir } from './portableEnv'
 
@@ -18,6 +19,11 @@ export function getPortableDataRoot(): string {
 }
 
 export function getLocalAppDataRoot(): string {
+  if (PLATFORM === 'linux') {
+    const xdg = process.env.XDG_DATA_HOME
+    const base = xdg && xdg.length > 0 ? xdg : join(homedir(), '.local', 'share')
+    return join(base, 'Ackem')
+  }
   const la = process.env.LOCALAPPDATA
   const base = la && la.length > 0 ? la : join(homedir(), 'AppData', 'Local')
   return join(base, 'Ackem')
@@ -40,18 +46,29 @@ export function formatDataRootDisplayPaths(settings: AppSettings): DataRootDispl
   const mode = settings.dataRootMode
 
   if (mode === 'localappdata') {
-    const la = process.env.LOCALAPPDATA
-    if (la && absolutePath.toLowerCase().startsWith(la.toLowerCase())) {
-      const tail = absolutePath.slice(la.length).replace(/^[/\\]+/, '')
-      return {
-        absolutePath,
-        relativePath: `%LOCALAPPDATA%\\${tail.replace(/\//g, '\\')}`,
-        mode
+    if (PLATFORM === 'linux') {
+      const xdg = process.env.XDG_DATA_HOME
+      if (xdg && absolutePath.startsWith(xdg)) {
+        const tail = absolutePath.slice(xdg.length).replace(/^[/\\]+/, '')
+        return { absolutePath, relativePath: `\$XDG_DATA_HOME/${tail}`, mode }
       }
+      const home = homedir()
+      const fromHome = toDisplayRelative(home, absolutePath, '~/')
+      if (fromHome) return { absolutePath, relativePath: fromHome, mode }
+    } else {
+      const la = process.env.LOCALAPPDATA
+      if (la && absolutePath.toLowerCase().startsWith(la.toLowerCase())) {
+        const tail = absolutePath.slice(la.length).replace(/^[/\\]+/, '')
+        return {
+          absolutePath,
+          relativePath: `%LOCALAPPDATA%\\${tail.replace(/\//g, '\\')}`,
+          mode
+        }
+      }
+      const home = homedir()
+      const fromHome = toDisplayRelative(home, absolutePath, '~/')
+      if (fromHome) return { absolutePath, relativePath: fromHome, mode }
     }
-    const home = homedir()
-    const fromHome = toDisplayRelative(home, absolutePath, '~/')
-    if (fromHome) return { absolutePath, relativePath: fromHome, mode }
   }
 
   if (mode === 'portable') {
